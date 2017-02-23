@@ -2,9 +2,14 @@ package co.com.simulator
 
 import co.com.simulator._
 import akka.actor._
-import scala.collection.mutable
+import scala.collection.mutable._
+import scala.concurrent.Future
+import akka.pattern.ask
+import scala.concurrent.duration._
+import akka.util.Timeout
+import scala.concurrent.ExecutionContext.Implicits.global
 
-case class Message(from: Account, to: Account, content: String, read: Boolean)
+case class Message(fromAddress: String, toAddress: String, content: String, var read: Boolean)
 case class EmailAddress(add: String){
   def isValid = add.split("@").size == 2
   val username = add.split("@")(0)
@@ -12,18 +17,18 @@ case class EmailAddress(add: String){
   override def toString = add
 }
 
-class Account(address: EmailAddress) extends Actor {
-
-  val sendedMessages = ListBuffer[Message]()
-  val receivedMessages = ListBuffer[Message]()
-  val myServer: Actor = context.actorSelection(address.domain)
-
-  def writeMessage(to: Account, content: String) = 
-    Message(self, to, content, false)
+class Account(val address: EmailAddress) extends Actor {
+  import Account._
+  var sendedMessages = ListBuffer[Message]()
+  var receivedMessages = ListBuffer[Message]()
+  val myServer = context.parent
 
   def receive = {
+    case WritableMessage(to,content) => {
+      myServer ! SendableMessage(Message(this.address.toString, to, content, false))
+    }
 
-    case SendableMessage(message) => myServer ! SendableMessage(message)
+    case PrintAddress => println(this.address.toString)
 
     case ReceivableMessage(message) => receivedMessages.append(message)
 
@@ -33,29 +38,24 @@ class Account(address: EmailAddress) extends Actor {
     }
 
     case ReadableMessage(message) => {
-      println("******")
-      println(s"From: ${m.from.address.toString}")
-      println("******Message content******")
-      println(m.content)
-      println("******\nEND")
-      m.read = true
+      message.read = true
     }
 
-    case GetUnreads => sender ! sendedMessages.toList.filter(x => !x.read)
-
-    case ReadAllUnreads => {
-      val unreads: Future[List[Message]] = self ? GetUnreads
-      unreads.foreach(messageList => {
-        messageList.foreach(m => {
-          self ! ReadableMessage(m)
-        })
-      })
-    }
+    case ReadAllUnreads => readUnreads
   }
 
-  def writeMessage(to: Account, content: String) = Message(self, to, content, false)
-  def read(m: Message) = self ! ReadableMessage(m)
-  def delete(m: Message) = self ! DeletableMessage(m)
+  def readUnreads = {
+    receivedMessages
+      .filter(x => !x.read)
+      .foreach(y =>{
+        println("******")
+        println(s"From: ${y.fromAddress}")
+        println("******Message content******")
+        println(y.content)
+        println("******\nEND")
+        y.read = true
+      })
+  }
 }
 
 //protocol definition
@@ -63,6 +63,8 @@ object Account {
   case class ReceivableMessage(m: Message)
   case class DeletableMessage(m: Message)
   case class ReadableMessage(m: Message)
+  case class WritableMessage(to: String, content: String)
   case object GetUnreads
   case object ReadAllUnreads
+  case object PrintAddress
 }
