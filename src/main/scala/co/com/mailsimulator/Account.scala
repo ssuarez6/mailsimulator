@@ -1,15 +1,11 @@
-package co.com.simulator
+package co.com.mailsimulator
 
-import co.com.simulator._
+import co.com.mailsimulator._
 import akka.actor._
 import scala.collection.mutable._
-import scala.concurrent.Future
-import akka.pattern.ask
-import scala.concurrent.duration._
-import akka.util.Timeout
-import scala.concurrent.ExecutionContext.Implicits.global
 
-case class Message(fromAddress: String, toAddress: String, content: String, var read: Boolean)
+
+case class Message(fromAddress: String, destinataries: List[String], content: String, var read: Boolean)
 case class EmailAddress(add: String){
   def isValid = add.split("@").size == 2
   val username = add.split("@")(0)
@@ -46,6 +42,10 @@ class Account(val address: EmailAddress) extends Actor {
     case ReadAllUnreads => readUnreads
 
     case ReadAllSent => printAllSent
+
+    case RetrieveInbox => sender ! receivedMessages
+
+    case RetrieveOutbox => sender ! sentMessages
   }
 
   def readUnreads = {
@@ -89,4 +89,6 @@ object Account {
   case object ReadAllUnreads
   case object PrintAddress
   case object ReadAllSent
+  case object RetrieveInbox
+  case object RetrieveOutbox
 }

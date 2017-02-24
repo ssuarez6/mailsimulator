@@ -1,7 +1,7 @@
-package co.com.simulator
+package co.com.mailsimulator
 
-import co.com.simulator._
-import co.com.simulator.Account._
+import co.com.mailsimulator._
+import co.com.mailsimulator.Account._
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
