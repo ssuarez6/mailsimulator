@@ -15,10 +15,10 @@ object MailSimulator extends App {
   
   implicit val timeout = Timeout(5 seconds)
   // init server actors
-  val googleActor = system.actorOf(Props(new MailServer("google.com")), "google.com")
-  val yahooActor = system.actorOf(Props(new MailServer("yahoo.com")), "yahoo.com")
-  val hotmailActor = system.actorOf(Props(new MailServer("hotmail.com")), "hotmail.com")
-  val s4nActor = system.actorOf(Props(new MailServer("s4n.co")), "s4n.co")
+  val googleActor = system.actorOf(Props(new MailServer("google.com")).withDispatcher("server-dispatcher"), "google.com")
+  val yahooActor = system.actorOf(Props(new MailServer("yahoo.com")).withDispatcher("server-dispatcher"), "yahoo.com")
+  val hotmailActor = system.actorOf(Props(new MailServer("hotmail.com")).withDispatcher("server-dispatcher"), "hotmail.com")
+  val s4nActor = system.actorOf(Props(new MailServer("s4n.co")).withDispatcher("server-dispatcher"), "s4n.co")
 
   //register user to the servers
   val user1 = RegisterUser("user1")

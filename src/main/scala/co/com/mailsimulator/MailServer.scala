@@ -48,7 +48,7 @@ class MailServer(domain: String) extends Actor{
       val index = registeredUsers.indexOf(username)
       if(index != -1) throw new RegisteredUserException
       val address = new EmailAddress(s"$username@$domain")
-      val user = context.actorOf(Props(new Account(address)), address.toString)
+      val user = context.actorOf(Props(new Account(address).withDispatcher("account-dispatcher")), address.toString)
       registeredUsers.append(username)
       context.unbecome()
     }
