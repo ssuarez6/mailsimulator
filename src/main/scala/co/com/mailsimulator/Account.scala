@@ -19,52 +19,74 @@ case class EmailAddress(add: String){
 
 class Account(val address: EmailAddress) extends Actor {
   import Account._
-  var sendedMessages = ListBuffer[Message]()
+  var sentMessages = ListBuffer[Message]()
   var receivedMessages = ListBuffer[Message]()
   val myServer = context.parent
 
   def receive = {
-    case WritableMessage(to,content) => {
-      myServer ! SendableMessage(Message(this.address.toString, to, content, false))
+    case WriteMessage(to,content) => {
+      val sentMessage = Message(this.address.toString, to, content, false)
+      sentMessages.append(sentMessage)
+      myServer ! SendMessage(sentMessage)
     }
 
     case PrintAddress => println(this.address.toString)
 
-    case ReceivableMessage(message) => receivedMessages.append(message)
+    case ReceiveMessage(message) => receivedMessages.append(message)
 
-    case DeletableMessage(message) => {
+    case DeleteMessage(message) => {
       val index = receivedMessages.indexOf(message)
       receivedMessages.remove(index)
     }
 
-    case ReadableMessage(message) => {
+    case ReadMessage(message) => {
       message.read = true
     }
 
     case ReadAllUnreads => readUnreads
+
+    case ReadAllSent => printAllSent
   }
 
   def readUnreads = {
-    receivedMessages
-      .filter(x => !x.read)
-      .foreach(y =>{
-        println("******")
-        println(s"From: ${y.fromAddress}")
-        println("******Message content******")
-        println(y.content)
-        println("******\nEND")
+    val unread = receivedMessages.filter(x => !x.read)
+    if(unread.size == 0) {
+      println("You have read all your messages!")
+    }else{
+      unread.foreach(y =>{
+        printMessage(y)
         y.read = true
       })
+    }
+  }
+
+  def printAllSent = {
+    if(sentMessages.size == 0){
+      println("You haven't sent any messages yet!")
+    }else{
+      sentMessages.foreach(printMessage(_))
+    }
+  }
+
+  def printMessage(m: Message): Unit = {
+        println("******")
+        println(s"From: ${m.fromAddress}")
+        println("******")
+        println(s"To: ${m.toAddress}")
+        println("******Message content******")
+        println(m.content)
+        println("******\nEND")
   }
 }
 
 //protocol definition
 object Account {
-  case class ReceivableMessage(m: Message)
-  case class DeletableMessage(m: Message)
-  case class ReadableMessage(m: Message)
-  case class WritableMessage(to: String, content: String)
+  case class ReceiveMessage(m: Message)
+  case class DeleteMessage(m: Message)
+  case class ReadMessage(m: Message)
+  case class WriteMessage(to: String, content: String)
   case object GetUnreads
   case object ReadAllUnreads
   case object PrintAddress
+  case object ReadAllSent
 }
